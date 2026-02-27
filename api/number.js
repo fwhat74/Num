@@ -7,17 +7,31 @@ let records = null;
 function loadCsv() {
   if (records) return records;
 
-  const filePath = path.join(process.cwd(), 'idapi.csv'); // data.csv root me hona chahiye
-  const fileContent = fs.readFileSync(filePath, 'utf8');
+  try {
+    // yahi se idapi.csv read kar rahe hain
+    const filePath = path.join(process.cwd(), 'idapi.csv');
+    console.log('Trying to read CSV from:', filePath);
 
-  const parsed = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true
-  });
+    if (!fs.existsSync(filePath)) {
+      console.error('CSV file not found at:', filePath);
+      throw new Error('CSV file not found');
+    }
 
-  records = parsed;
-  return records;
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+
+    const parsed = parse(fileContent, {
+      columns: true,          // pehli row headers hai
+      skip_empty_lines: true,
+      trim: true
+    });
+
+    console.log('CSV parsed, total rows:', parsed.length);
+    records = parsed;
+    return records;
+  } catch (err) {
+    console.error('Error while loading CSV:', err);
+    throw err;
+  }
 }
 
 export default function handler(req, res) {
@@ -26,14 +40,15 @@ export default function handler(req, res) {
   if (!number) {
     return res.status(400).json({
       success: false,
-      error: 'Query parameter "number" is required, e.g. /api/number?number=919113000255'
+      error: 'Query parameter "number" is required, e.g. /api/number?number=919606001060'
     });
   }
 
   try {
     const data = loadCsv();
 
-    const item = data.find(row => row.Number === number);
+    // CSV header me "Number" capital N ke sath hai, wohi use kar rahe hain
+    const item = data.find((row) => row.Number === number);
 
     if (!item) {
       return res.status(404).json({
@@ -47,10 +62,10 @@ export default function handler(req, res) {
       data: item
     });
   } catch (err) {
-    console.error(err);
+    console.error('Handler error:', err);
     return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
   }
-                                }
+}
