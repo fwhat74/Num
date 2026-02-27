@@ -1,17 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { parse } from 'csv-parse/sync';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let records = null;
 
+function cleanValue(value) {
+  if (!value) return "";
+  return value.replace(/^"+|"+$/g, "").trim();
+}
+
 function loadCsv() {
   if (records) return records;
 
-  // Root folder CSV path
   const filePath = path.join(__dirname, '../idapi.csv');
 
   if (!fs.existsSync(filePath)) {
@@ -20,14 +23,21 @@ function loadCsv() {
 
   const fileContent = fs.readFileSync(filePath, 'utf-8');
 
-  records = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-    relax_quotes: true,
-    relax_column_count: true,
-    relax_column_count_more: true,
-    relax_column_count_less: true
+  const lines = fileContent.split('\n').filter(Boolean);
+
+  const headers = lines[0]
+    .split(',')
+    .map(h => cleanValue(h));
+
+  records = lines.slice(1).map(line => {
+    const values = line.split(',');
+
+    let obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = cleanValue(values[index]);
+    });
+
+    return obj;
   });
 
   return records;
@@ -61,7 +71,6 @@ export default function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("SERVER ERROR:", err);
     return res.status(500).json({
       success: false,
       error: err.message
