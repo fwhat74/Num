@@ -1,26 +1,27 @@
-import fs from 'fs';
-import path from 'path';
 import { parse } from 'csv-parse/sync';
 
 let records = null;
 
-function loadCsv() {
+// Apna base URL yahan set karo (production domain)
+// e.g. https://num.vercel.app
+const BASE_URL = process.env.BASE_URL || 'https://num.vercel.app'; // isko apne project ke URL se replace karo
+
+async function loadCsv() {
   if (records) return records;
 
   try {
-    // yahi se idapi.csv read kar rahe hain
-    const filePath = path.join(process.cwd(), 'idapi.csv');
-    console.log('Trying to read CSV from:', filePath);
+    const csvUrl = `${BASE_URL}/idapi.csv`;
+    console.log('Fetching CSV from:', csvUrl);
 
-    if (!fs.existsSync(filePath)) {
-      console.error('CSV file not found at:', filePath);
-      throw new Error('CSV file not found');
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
     }
 
-    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const fileContent = await response.text();
 
     const parsed = parse(fileContent, {
-      columns: true,          // pehli row headers hai
+      columns: true,
       skip_empty_lines: true,
       trim: true
     });
@@ -29,12 +30,12 @@ function loadCsv() {
     records = parsed;
     return records;
   } catch (err) {
-    console.error('Error while loading CSV:', err);
+    console.error('Error while loading CSV via HTTP:', err);
     throw err;
   }
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const { number } = req.query;
 
   if (!number) {
@@ -45,9 +46,8 @@ export default function handler(req, res) {
   }
 
   try {
-    const data = loadCsv();
+    const data = await loadCsv();
 
-    // CSV header me "Number" capital N ke sath hai, wohi use kar rahe hain
     const item = data.find((row) => row.Number === number);
 
     if (!item) {
