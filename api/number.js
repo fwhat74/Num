@@ -1,54 +1,39 @@
+import fs from 'fs';
+import path from 'path';
 import { parse } from 'csv-parse/sync';
 
 let records = null;
 
-// Apna base URL yahan set karo (production domain)
-// e.g. https://num.vercel.app
-const BASE_URL = process.env.BASE_URL || 'http://num-kingali.vercel.app/'; // isko apne project ke URL se replace karo
-
-async function loadCsv() {
+function loadCsv() {
   if (records) return records;
 
-  try {
-    const csvUrl = `${BASE_URL}/idapi.csv`;
-    console.log('Fetching CSV from:', csvUrl);
+  const filePath = path.join(process.cwd(), 'idapi.csv');
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
 
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-    }
+  records = parse(fileContent, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true
+  });
 
-    const fileContent = await response.text();
-
-    const parsed = parse(fileContent, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true
-    });
-
-    console.log('CSV parsed, total rows:', parsed.length);
-    records = parsed;
-    return records;
-  } catch (err) {
-    console.error('Error while loading CSV via HTTP:', err);
-    throw err;
-  }
+  return records;
 }
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   const { number } = req.query;
 
   if (!number) {
     return res.status(400).json({
       success: false,
-      error: 'Query parameter "number" is required, e.g. /api/number?number=919606001060'
+      error: 'Query parameter "number" is required. Example: /api/number?number=919606001060'
     });
   }
 
   try {
-    const data = await loadCsv();
+    const data = loadCsv();
 
-    const item = data.find((row) => row.Number === number);
+    // ⚠️ Make sure header name matches exactly CSV column
+    const item = data.find(row => row.Number === number);
 
     if (!item) {
       return res.status(404).json({
@@ -61,11 +46,15 @@ export default async function handler(req, res) {
       success: true,
       data: item
     });
+
   } catch (err) {
-    console.error('Handler error:', err);
+    console.error(err);
     return res.status(500).json({
       success: false,
       error: 'Internal server error'
+    });
+  }
+}      error: 'Internal server error'
     });
   }
 }
