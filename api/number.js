@@ -1,14 +1,18 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { parse } from 'csv-parse/sync';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let records;
 
 function loadCsv() {
   if (records) return records;
 
-  // Vercel production safe path
-  const filePath = path.join(process.cwd(), 'idapi.csv');
+  // Go one level up from /api folder
+  const filePath = path.join(__dirname, '../idapi.csv');
 
   if (!fs.existsSync(filePath)) {
     throw new Error('CSV file not found at: ' + filePath);
@@ -53,7 +57,6 @@ export default function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("REAL ERROR:", err);
     return res.status(500).json({
       success: false,
       error: err.message
