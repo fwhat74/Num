@@ -6,16 +6,16 @@ import { parse } from 'csv-parse/sync';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let records;
+let records = null;
 
 function loadCsv() {
   if (records) return records;
 
-  // Go one level up from /api folder
+  // Root folder CSV path
   const filePath = path.join(__dirname, '../idapi.csv');
 
   if (!fs.existsSync(filePath)) {
-    throw new Error('CSV file not found at: ' + filePath);
+    throw new Error('CSV file not found');
   }
 
   const fileContent = fs.readFileSync(filePath, 'utf-8');
@@ -23,7 +23,11 @@ function loadCsv() {
   records = parse(fileContent, {
     columns: true,
     skip_empty_lines: true,
-    trim: true
+    trim: true,
+    relax_quotes: true,
+    relax_column_count: true,
+    relax_column_count_more: true,
+    relax_column_count_less: true
   });
 
   return records;
@@ -57,6 +61,7 @@ export default function handler(req, res) {
     });
 
   } catch (err) {
+    console.error("SERVER ERROR:", err);
     return res.status(500).json({
       success: false,
       error: err.message
