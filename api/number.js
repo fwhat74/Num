@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 
-let records = null;
+let records;
 
 function loadCsv() {
   if (records) return records;
@@ -25,36 +25,32 @@ export default function handler(req, res) {
   if (!number) {
     return res.status(400).json({
       success: false,
-      error: 'Query parameter "number" is required. Example: /api/number?number=919606001060'
+      error: 'Use: /api/number?number=XXXXXXXXXX'
     });
   }
 
   try {
     const data = loadCsv();
 
-    // ⚠️ Make sure header name matches exactly CSV column
-    const item = data.find(row => row.Number === number);
+    // ⚠️ Yaha column name EXACT match hona chahiye CSV header se
+    const result = data.find(row => row.Number === number);
 
-    if (!item) {
+    if (!result) {
       return res.status(404).json({
         success: false,
-        error: 'Number not found'
+        message: 'Number not found'
       });
     }
 
     return res.status(200).json({
       success: true,
-      data: item
+      data: result
     });
 
   } catch (err) {
-    console.error(err);
     return res.status(500).json({
       success: false,
-      error: 'Internal server error'
-    });
-  }
-}      error: 'Internal server error'
+      error: 'Server error'
     });
   }
 }
