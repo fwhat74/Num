@@ -1,16 +1,18 @@
-import fs from 'fs';
-import path from 'path';
 import { parse } from 'csv-parse/sync';
 
 let records;
 
-function loadCsv() {
+async function loadCsv() {
   if (records) return records;
 
-  const filePath = path.join(process.cwd(), 'idapi.csv');
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  // Direct relative import using fetch from same deployment
+  const response = await fetch(
+    new URL('../../idapi.csv', import.meta.url)
+  );
 
-  records = parse(fileContent, {
+  const text = await response.text();
+
+  records = parse(text, {
     columns: true,
     skip_empty_lines: true,
     trim: true
@@ -19,18 +21,18 @@ function loadCsv() {
   return records;
 }
 
-export default function handler(req, res) {
-  const { number } = req.query;
-
-  if (!number) {
-    return res.status(400).json({
-      success: false,
-      error: 'Use: /api/number?number=919606001060'
-    });
-  }
-
+export default async function handler(req, res) {
   try {
-    const data = loadCsv();
+    const { number } = req.query;
+
+    if (!number) {
+      return res.status(400).json({
+        success: false,
+        error: 'Use: /api/number?number=919606001060'
+      });
+    }
+
+    const data = await loadCsv();
 
     const result = data.find(row => row.Number === number);
 
@@ -47,10 +49,10 @@ export default function handler(req, res) {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("REAL ERROR:", err);
     return res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: err.message
     });
   }
 }
