@@ -4,7 +4,7 @@ let records = null;
 
 // Apna base URL yahan set karo (production domain)
 // e.g. https://num.vercel.app
-const BASE_URL = process.env.BASE_URL || 'https://num.vercel.app'; // isko apne project ke URL se replace karo
+const BASE_URL = process.env.BASE_URL || 'http://num-kingali.vercel.app/'; // isko apne project ke URL se replace karo
 
 async function loadCsv() {
   if (records) return records;
