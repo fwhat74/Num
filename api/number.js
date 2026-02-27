@@ -1,18 +1,22 @@
+import fs from 'fs';
+import path from 'path';
 import { parse } from 'csv-parse/sync';
 
 let records;
 
-async function loadCsv() {
+function loadCsv() {
   if (records) return records;
 
-  // Direct relative import using fetch from same deployment
-  const response = await fetch(
-    new URL('../../idapi.csv', import.meta.url)
-  );
+  // Vercel production safe path
+  const filePath = path.join(process.cwd(), 'idapi.csv');
 
-  const text = await response.text();
+  if (!fs.existsSync(filePath)) {
+    throw new Error('CSV file not found at: ' + filePath);
+  }
 
-  records = parse(text, {
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+  records = parse(fileContent, {
     columns: true,
     skip_empty_lines: true,
     trim: true
@@ -21,7 +25,7 @@ async function loadCsv() {
   return records;
 }
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   try {
     const { number } = req.query;
 
@@ -32,7 +36,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const data = await loadCsv();
+    const data = loadCsv();
 
     const result = data.find(row => row.Number === number);
 
